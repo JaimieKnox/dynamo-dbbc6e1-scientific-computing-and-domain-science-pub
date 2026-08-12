@@ -1,17 +1,15 @@
-<!--
-  This file is the PROMPT handed verbatim to the model that will attempt your task.
-  Replace everything in this comment with your task instruction, then delete the comment.
+Publish domain rates and totals for the Vale household survey.
 
-  Guidelines:
-  - Write it yourself, as a domain expert. Do NOT generate it with an LLM.
-  - It's a prompt, not a document — no title, no section headers, no excessive Markdown.
-  - Write it the way you'd brief a skilled colleague.
-  - Use absolute paths (e.g. /app/output.txt), never relative paths.
-  - Be explicit about every expected output file and its exact format/schema.
-  - Include everything the agent needs to solve the task — and nothing more (don't
-    hint at or reveal your solution).
-  - Keep it concise (<= 1500 tokens). State the goal and required outputs; skip
-    backstory, roleplay, and filler.
--->
+Fit trees under `/app/fit/case_*/` ship the same input filenames as production. They do not ship expected CSVs. The digest-allowlisted check-only probe `/app/bin/sae_ref` may be used on those trees only. The unique published estimand, schema, rounding, and closed formulas are in `/app/docs/CONTRACT.md`.
 
-Replace this file with your task instruction.
+Usage:
+
+`/app/bin/sae_ref check DATA_DIR OUT_DIR`
+
+`sae_ref check` exits 0 when `OUT_DIR`'s `domain_estimates.csv` matches the allowlisted digest for that fit input tree. It never writes golden CSVs. It exits nonzero with a short non-spoiling message on mismatch, and refuses production `/app/data` and any other or mutated directory.
+
+Production grading is on `/app/data` only. Write outputs only under `/app/output/`. That production tree does not ship expected outputs. `/app/lib/survey_kit.py` exposes exploration IO helpers only and is not a graded builder.
+
+Write:
+
+- `/app/output/domain_estimates.csv`

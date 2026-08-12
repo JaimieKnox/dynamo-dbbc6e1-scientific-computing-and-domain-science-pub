@@ -1,0 +1,11 @@
+*
+!data/
+!data/**
+!fit/
+!fit/**
+!docs/
+!docs/**
+!lib/
+!lib/**
+!sae_ref/
+!sae_ref/**

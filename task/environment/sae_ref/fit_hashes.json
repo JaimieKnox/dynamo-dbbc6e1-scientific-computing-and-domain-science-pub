@@ -1,0 +1,54 @@
+{
+  "cases": {
+    "case_00": {
+      "input_digest": "ec13a3d333240c8a13416427025983d16aaa1626525b9d19d5ad69ad66b896bc",
+      "output_sha256": "2b59458e51afaa0da5717346bf5743be9a8cab42bbe5d4c897644d024ec88ee6",
+      "n_hh": 384
+    },
+    "case_01": {
+      "input_digest": "430954a075f329a8c177a99a2c257c8da465274fa28160f706e594724807a285",
+      "output_sha256": "119e88bae3230fd3db22cb67de0b07588069f3cd02ea80b935ea3a08d4952316",
+      "n_hh": 384
+    },
+    "case_02": {
+      "input_digest": "49bc1490f5193acf597188d01c827262295da45477201011aa0fe573f51a7bf1",
+      "output_sha256": "9ddf789324234e97179b83da5f7e1c2b8ff6e9bc20c7cc4bceb9ecfceeee0ebb",
+      "n_hh": 448
+    },
+    "case_03": {
+      "input_digest": "3ab0b963981e1e132d6e07dc07844979d6f8fe2eb120c0fb4f4223a0ce44eed2",
+      "output_sha256": "21be9cadc2fae267ae60552a24153291dac483fd3a8807815d49532a2c4e9791",
+      "n_hh": 384
+    },
+    "case_04": {
+      "input_digest": "ec4b7ac816e17d5deccc9493c7218398181b0a4c170143af848bb1a572fff2c9",
+      "output_sha256": "c48997113a5a66cd9d8e7a3f37f2c74e293874f74b521fbf9794803d628cbe64",
+      "n_hh": 384
+    },
+    "case_05": {
+      "input_digest": "51f25b5d9abc2dd26b550c60af164f6616805ff65efd0878d42b62fae42c76a3",
+      "output_sha256": "9297f314fc35e140ada7de6098e3774de2266f798d0261abb40c9e90c412a712",
+      "n_hh": 384
+    },
+    "case_06": {
+      "input_digest": "031c58a293e393c4c1354718697251cbbf0a815da9222f68c21caadaf8554d9f",
+      "output_sha256": "133e7a585cf0db4e0a13c0245f74cf44f47c7aad521ea929eabd92a7b848cac7",
+      "n_hh": 313
+    },
+    "case_07": {
+      "input_digest": "8810bf2070156c97e0cf93cd24b1d63512c0266b97d0feb292ea905ecf349e28",
+      "output_sha256": "73c1a99d680001dbf5251e0f09cab1fb85ab70ef4d7bc33db4654b8adfe5443d",
+      "n_hh": 176
+    },
+    "case_08": {
+      "input_digest": "6213d5e7d0502a99386e963fbcaeb6c04443fa30719ecb04ea1d9b05aff8ac92",
+      "output_sha256": "bdbb058b85209570fadb9ab2f3cc3c9ce7b4096b49a91c11a0c59526f0ff05c9",
+      "n_hh": 352
+    },
+    "case_09": {
+      "input_digest": "521f67164c3b2c566b06e608cf0604ede39a06edbc28079468ef27e2aad35ea2",
+      "output_sha256": "4941eea6d387effb7d8c38d9b5f6fb44d8a1057f146339dca8044f3114119910",
+      "n_hh": 384
+    }
+  }
+}
