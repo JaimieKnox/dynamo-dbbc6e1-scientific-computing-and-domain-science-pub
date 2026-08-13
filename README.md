@@ -8,7 +8,7 @@ Construct analysis weights from collapsed listings, interviews, roster, a listin
 
 ## Environment
 
-Python 3.13 with numpy. Survey extracts live under `/app/data` and `/app/fit/case_*/`. The estimand is `/app/docs/CONTRACT.md`. `/app/bin/sae_ref` is a check-only fit probe.
+Python 3.13 with numpy. Survey extracts live under `/app/data` and `/app/fit/case_*/`. The estimand is `/app/docs/CONTRACT.md`.
 
 ## Verification
 

@@ -7,13 +7,9 @@ RUN pip install --no-cache-dir \
 
 WORKDIR /app
 
-RUN mkdir -p /app/output /app/data /app/fit /app/docs /app/bin /app/lib
+RUN mkdir -p /app/output /app/data /app/fit /app/docs /app/lib
 
 COPY data/ /app/data/
 COPY fit/ /app/fit/
 COPY docs/ /app/docs/
 COPY lib/ /app/lib/
-COPY sae_ref/sae_ref.py /app/bin/sae_ref
-COPY sae_ref/fit_hashes.json /app/bin/fit_hashes.json
-
-RUN chmod 0755 /app/bin/sae_ref

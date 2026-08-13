@@ -3,9 +3,6 @@
 from __future__ import annotations
 
 import csv
-import shutil
-import subprocess
-import tempfile
 from pathlib import Path
 
 from estimator import estimate_rows, OUT_FIELDS
@@ -15,7 +12,6 @@ DATA = Path("/app/data")
 FIT = Path("/app/fit")
 OUT = Path("/app/output")
 TABLE = OUT / "domain_estimates.csv"
-SAE_REF = Path("/app/bin/sae_ref")
 TESTS_PROD = Path("/tests/inputs/production")
 INPUT_FILES = (
     "listings.csv",
@@ -76,53 +72,6 @@ def test_wrong_model_contrasts_diverge():
     assert all_contrasts(TESTS_PROD) is True
 
 
-def test_sae_ref_refuses_production():
-    """Success: digest-allowlisted sae_ref check refuses the production tree."""
-    assert SAE_REF.is_file()
-    proc = subprocess.run(
-        [str(SAE_REF), "check", str(DATA), "/tmp/sae_ref_prod_out"],
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
-    assert proc.returncode != 0
-    assert "refuse" in (proc.stderr + proc.stdout).lower()
-
-
-def test_sae_ref_accepts_correct_fit_and_rejects_mutated_tree():
-    """Success: sae_ref check accepts a correct fit candidate and refuses a mutated copy."""
-    case = FIT / "case_00"
-    assert case.is_dir()
-    rows = estimate_rows(case)
-    with tempfile.TemporaryDirectory() as tmp:
-        out = Path(tmp)
-        with (out / "domain_estimates.csv").open("w", newline="\n", encoding="utf-8") as handle:
-            writer = csv.DictWriter(handle, fieldnames=OUT_FIELDS, lineterminator="\n")
-            writer.writeheader()
-            writer.writerows(rows)
-        proc = subprocess.run(
-            [str(SAE_REF), "check", str(case), str(out)],
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        assert proc.returncode == 0, proc.stderr + proc.stdout
-    src = FIT / "case_01"
-    with tempfile.TemporaryDirectory(dir="/tmp") as td:
-        dst = Path(td) / "mutated"
-        shutil.copytree(src, dst)
-        text = (dst / "listings.csv").read_text(encoding="utf-8")
-        (dst / "listings.csv").write_text(text + "\n", encoding="utf-8")
-        proc = subprocess.run(
-            [str(SAE_REF), "check", str(dst), "/tmp/sae_ref_mut_out"],
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        assert proc.returncode != 0
-        assert "refuse" in (proc.stderr + proc.stdout).lower()
-
-
 def test_fit_inputs_have_no_expected_csvs():
     """Success: agent-visible fit cases ship inputs only."""
     assert FIT.is_dir()
@@ -134,3 +83,5 @@ def test_fit_inputs_have_no_expected_csvs():
             assert (case / name).is_file(), f"{case.name}/{name}"
         assert case.name.startswith("case_")
         assert case.name.removeprefix("case_").isdigit(), case.name
+    assert not (Path("/app/bin") / "sae_ref").exists()
+    assert not (Path("/app/bin") / "fit_hashes.json").exists()
