@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Closed-form Vale domain rate and total estimator."""
+"""Finite-population domain program-contrast estimator."""
 
 from __future__ import annotations
 
@@ -10,9 +10,12 @@ from typing import Any
 
 import numpy as np
 
-RATE_PLACES = 6
-TOTAL_PLACES = 2
-OUT_FIELDS = ["domain_id", "est_total", "est_rate"]
+ATE_PLACES = 6
+SE_PLACES = 6
+OUT_FIELDS = ["domain_id", "status", "est_ate", "est_se"]
+STATUS_IDENTIFIED = "identified"
+STATUS_UNIDENTIFIED = "unidentified"
+STATUS_EMPTY = "empty"
 
 
 def qround(value: float, places: int) -> str:
@@ -79,11 +82,13 @@ def construct_sample(data_dir: Path) -> list[dict[str, str]]:
             phase2 = "0"
             y = ""
             tenure = ""
+            assigned = ""
         else:
             responded = iv["responded"]
             phase2 = iv["phase2"]
             y = iv["y"]
             tenure = iv["tenure"]
+            assigned = iv.get("assigned", "")
         eligible = ros["eligible_count"] if ros is not None else ""
         households.append(
             {
@@ -98,6 +103,7 @@ def construct_sample(data_dir: Path) -> list[dict[str, str]]:
                 "responded": responded,
                 "phase2": phase2,
                 "y": y,
+                "assigned": assigned,
                 "eligible_count": eligible,
             }
         )
@@ -117,11 +123,10 @@ def load_tree(data_dir: Path) -> tuple[list[dict[str, str]], list[dict[str, str]
 def _design_matrix_rows(
     records: list[dict[str, Any]],
     included_regions: list[str],
-    urban_key: str,
 ) -> np.ndarray:
     rows = []
     for rec in records:
-        row = [1.0, float(rec[urban_key])]
+        row = [1.0, float(rec["urban"])]
         region = rec["region"]
         row.extend(1.0 if region == name else 0.0 for name in included_regions)
         rows.append(row)
@@ -175,9 +180,11 @@ def estimate_rows(data_dir: Path) -> list[dict[str, str]]:
 
     analysis: list[dict[str, Any]] = []
     for rec in phase2:
-        key = (rec["tenure"], _as_int(rec["urban"]))
+        if rec["assigned"].strip() not in {"0", "1"}:
+            continue
         if rec["eligible_count"].strip() == "":
             continue
+        key = (rec["tenure"], _as_int(rec["urban"]))
         if _missing_y(rec["y"]):
             if key not in item_mean:
                 continue
@@ -196,21 +203,19 @@ def estimate_rows(data_dir: Path) -> list[dict[str, str]]:
                 "urban": _as_int(rec["urban"]),
                 "eligible_count": _as_float(rec["eligible_count"]),
                 "y": y_val,
+                "assigned": _as_int(rec["assigned"]),
                 "w2": w2,
             }
         )
     if not analysis:
         raise ValueError("empty analysis sample")
 
-    z = _design_matrix_rows(analysis, included, "urban")
+    z = _design_matrix_rows(analysis, included)
     w2 = np.asarray([row["w2"] for row in analysis], dtype=np.float64)
     t_hat = z.T @ w2
     ztwz = z.T @ (w2[:, None] * z)
 
-    totals = {
-        "intercept": 0.0,
-        "urban": 0.0,
-    }
+    totals = {"intercept": 0.0, "urban": 0.0}
     for name in included:
         totals[name] = 0.0
     for rec in census:
@@ -230,11 +235,6 @@ def estimate_rows(data_dir: Path) -> list[dict[str, str]]:
     for rec, weight in zip(analysis, w_cal):
         rec["w"] = float(weight)
 
-    y = np.asarray([row["y"] for row in analysis], dtype=np.float64)
-    xtwx = z.T @ (w_cal[:, None] * z)
-    xtwy = z.T @ (w_cal * y)
-    beta = np.linalg.solve(xtwx, xtwy)
-
     psu_by_stratum: dict[str, set[str]] = {}
     for rec in households:
         psu_by_stratum.setdefault(rec["stratum"], set()).add(rec["psu"])
@@ -247,87 +247,63 @@ def estimate_rows(data_dir: Path) -> list[dict[str, str]]:
     for rec in analysis:
         analysis_by_domain.setdefault(rec["domain_id"], []).append(rec)
 
-    direct: dict[str, dict[str, float]] = {}
-    for dom in domains:
+    out = []
+    for rec in census:
+        dom = rec["domain_id"]
         members = analysis_by_domain.get(dom, [])
         if not members:
+            out.append(
+                {
+                    "domain_id": dom,
+                    "status": STATUS_EMPTY,
+                    "est_ate": "",
+                    "est_se": "",
+                }
+            )
             continue
-        t_d = sum(rec["w"] * rec["y"] for rec in members)
-        e_d = sum(rec["w"] * rec["eligible_count"] for rec in members)
-        if e_d <= 0.0:
+        arms = {int(row["assigned"]) for row in members}
+        e1 = sum(row["w"] * row["eligible_count"] for row in members if row["assigned"] == 1)
+        e0 = sum(row["w"] * row["eligible_count"] for row in members if row["assigned"] == 0)
+        if arms != {0, 1} or e1 <= 0.0 or e0 <= 0.0:
+            out.append(
+                {
+                    "domain_id": dom,
+                    "status": STATUS_UNIDENTIFIED,
+                    "est_ate": "",
+                    "est_se": "",
+                }
+            )
             continue
-        r_d = t_d / e_d
+        t1 = sum(row["w"] * row["y"] for row in members if row["assigned"] == 1)
+        t0 = sum(row["w"] * row["y"] for row in members if row["assigned"] == 0)
+        r1 = t1 / e1
+        r0 = t0 / e0
+        ate = r1 - r0
         z_psu: dict[tuple[str, str], float] = {}
         for stratum, psus in psu_by_stratum.items():
             for psu in psus:
                 z_psu[(stratum, psu)] = 0.0
-        for rec in members:
-            key = (rec["stratum"], rec["psu"])
-            z_psu[key] += rec["w"] * (rec["y"] - r_d * rec["eligible_count"])
+        for row in members:
+            key = (row["stratum"], row["psu"])
+            if row["assigned"] == 1:
+                z_psu[key] += row["w"] * (row["y"] - r1 * row["eligible_count"]) / e1
+            else:
+                z_psu[key] -= row["w"] * (row["y"] - r0 * row["eligible_count"]) / e0
         var = 0.0
         for stratum, psus in psu_by_stratum.items():
             n_h = len(psus)
             vals = np.asarray([z_psu[(stratum, psu)] for psu in sorted(psus)], dtype=np.float64)
             zbar = float(vals.mean())
             var += (n_h / (n_h - 1)) * float(np.sum((vals - zbar) ** 2))
-        psi = var / (e_d * e_d)
-        direct[dom] = {"r": r_d, "psi": psi, "e": e_d, "t": t_d}
-
-    syn: dict[str, float] = {}
-    x_area_rows = []
-    y_area = []
-    psi_area = []
-    area_ids = []
-    for rec in census:
-        x_d = [1.0, _as_float(rec["urban_share"])]
-        x_d.extend(1.0 if rec["region"] == name else 0.0 for name in included)
-        x_arr = np.asarray(x_d, dtype=np.float64)
-        syn[rec["domain_id"]] = float(x_arr @ beta)
-        if rec["domain_id"] in direct:
-            x_area_rows.append(x_d)
-            y_area.append(direct[rec["domain_id"]]["r"])
-            psi_area.append(direct[rec["domain_id"]]["psi"])
-            area_ids.append(rec["domain_id"])
-
-    a_val = 0.0
-    m = len(area_ids)
-    p = 2 + len(included)
-    if m > p and x_area_rows:
-        x_area = np.asarray(x_area_rows, dtype=np.float64)
-        y_a = np.asarray(y_area, dtype=np.float64)
-        psi_a = np.asarray(psi_area, dtype=np.float64)
-        xtx = x_area.T @ x_area
-        try:
-            beta_ols = np.linalg.solve(xtx, x_area.T @ y_a)
-            resid = y_a - x_area @ beta_ols
-            hat = x_area @ np.linalg.solve(xtx, x_area.T)
-            lever = np.clip(np.diag(hat), 0.0, 1.0)
-            a_pr = (float(np.sum(resid ** 2)) - float(np.sum(psi_a * (1.0 - lever)))) / (m - p)
-            a_val = max(0.0, a_pr)
-        except np.linalg.LinAlgError:
-            a_val = 0.0
-
-    out = []
-    for rec in census:
-        dom = rec["domain_id"]
-        syn_d = syn[dom]
-        if dom not in direct:
-            gamma = 0.0
-            rate = syn_d
-        else:
-            psi = direct[dom]["psi"]
-            r_d = direct[dom]["r"]
-            if psi == 0.0:
-                gamma = 1.0
-            elif a_val == 0.0:
-                gamma = 0.0
-            else:
-                gamma = a_val / (a_val + psi)
-            rate = gamma * r_d + (1.0 - gamma) * syn_d
-        rate_s = qround(rate, RATE_PLACES)
-        total = float(Decimal(rate_s) * Decimal(rec["eligible_count_census"]))
-        total_s = qround(total, TOTAL_PLACES)
-        out.append({"domain_id": dom, "est_total": total_s, "est_rate": rate_s})
+        se = float(np.sqrt(max(var, 0.0)))
+        out.append(
+            {
+                "domain_id": dom,
+                "status": STATUS_IDENTIFIED,
+                "est_ate": qround(ate, ATE_PLACES),
+                "est_se": qround(se, SE_PLACES),
+            }
+        )
     return out
 
 

@@ -35,7 +35,7 @@ def read_census(data_dir: str | Path) -> list[dict[str, str]]:
 def write_domain_csv(path: str | Path, rows: list[dict[str, str]]) -> None:
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
-    fields = ["domain_id", "est_total", "est_rate"]
+    fields = ["domain_id", "status", "est_ate", "est_se"]
     with out.open("w", newline="\n", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields, lineterminator="\n")
         writer.writeheader()

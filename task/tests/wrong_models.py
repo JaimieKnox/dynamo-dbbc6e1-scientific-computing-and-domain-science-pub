@@ -4,10 +4,18 @@ from __future__ import annotations
 
 import csv
 from collections import defaultdict
-from decimal import Decimal
 from pathlib import Path
 
-from estimator import estimate_rows, load_tree, qround, RATE_PLACES, TOTAL_PLACES
+from estimator import (
+    ATE_PLACES,
+    SE_PLACES,
+    STATUS_EMPTY,
+    STATUS_IDENTIFIED,
+    STATUS_UNIDENTIFIED,
+    estimate_rows,
+    load_tree,
+    qround,
+)
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:
@@ -15,48 +23,88 @@ def _read_csv(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
-def _pack(census: list[dict[str, str]], rates: dict[str, float]) -> list[dict[str, str]]:
+def _pack(
+    census: list[dict[str, str]],
+    ate: dict[str, float],
+    identified: set[str],
+    *,
+    always_fill: bool,
+) -> list[dict[str, str]]:
     out = []
     for rec in census:
-        rate = rates.get(rec["domain_id"], 0.0)
-        rate_s = qround(rate, RATE_PLACES)
-        total = float(Decimal(rate_s) * Decimal(rec["eligible_count_census"]))
+        dom = rec["domain_id"]
+        if always_fill:
+            val = ate.get(dom, 0.0)
+            out.append(
+                {
+                    "domain_id": dom,
+                    "status": STATUS_IDENTIFIED,
+                    "est_ate": qround(val, ATE_PLACES),
+                    "est_se": qround(0.0, SE_PLACES),
+                }
+            )
+            continue
+        if dom not in ate and dom not in identified:
+            out.append(
+                {
+                    "domain_id": dom,
+                    "status": STATUS_EMPTY,
+                    "est_ate": "",
+                    "est_se": "",
+                }
+            )
+            continue
+        if dom not in identified:
+            out.append(
+                {
+                    "domain_id": dom,
+                    "status": STATUS_UNIDENTIFIED,
+                    "est_ate": "",
+                    "est_se": "",
+                }
+            )
+            continue
         out.append(
             {
-                "domain_id": rec["domain_id"],
-                "est_total": qround(total, TOTAL_PLACES),
-                "est_rate": rate_s,
+                "domain_id": dom,
+                "status": STATUS_IDENTIFIED,
+                "est_ate": qround(ate[dom], ATE_PLACES),
+                "est_se": qround(0.0, SE_PLACES),
             }
         )
     return out
 
 
-def _unweighted_means(data_dir: Path) -> list[dict[str, str]]:
+def _ols_always_fill(data_dir: Path) -> list[dict[str, str]]:
     households, census = load_tree(data_dir)
-    by_dom: dict[str, list[float]] = defaultdict(list)
+    by_dom: dict[str, dict[int, list[float]]] = defaultdict(lambda: {0: [], 1: []})
     for rec in households:
-        if rec["responded"] != "1":
+        if rec["responded"] != "1" or rec["y"].strip() == "":
             continue
-        if rec["y"].strip() == "":
+        if rec["assigned"] not in {"0", "1"}:
             continue
         elig = float(rec["eligible_count"] or 0)
         if elig <= 0:
             continue
-        by_dom[rec["domain_id"]].append(float(rec["y"]) / elig)
-    rates = {}
+        by_dom[rec["domain_id"]][int(rec["assigned"])].append(float(rec["y"]) / elig)
+    ate = {}
     for rec in census:
-        vals = by_dom.get(rec["domain_id"], [])
-        rates[rec["domain_id"]] = float(sum(vals) / len(vals)) if vals else 0.0
-    return _pack(census, rates)
+        arms = by_dom.get(rec["domain_id"], {0: [], 1: []})
+        m1 = sum(arms[1]) / len(arms[1]) if arms[1] else 0.0
+        m0 = sum(arms[0]) / len(arms[0]) if arms[0] else 0.0
+        ate[rec["domain_id"]] = m1 - m0
+    return _pack(census, ate, set(ate), always_fill=True)
 
 
-def _interview_domain_means(data_dir: Path) -> list[dict[str, str]]:
+def _interview_domain_ols(data_dir: Path) -> list[dict[str, str]]:
     interviews = _read_csv(data_dir / "interviews.csv")
     roster = {rec["hh_id"]: rec for rec in _read_csv(data_dir / "roster.csv")}
     census = _read_csv(data_dir / "census_domains.csv")
-    by_dom: dict[str, list[float]] = defaultdict(list)
+    by_dom: dict[str, dict[int, list[float]]] = defaultdict(lambda: {0: [], 1: []})
     for rec in interviews:
         if rec["responded"] != "1" or rec["y"].strip() == "":
+            continue
+        if rec.get("assigned", "") not in {"0", "1"}:
             continue
         ros = roster.get(rec["hh_id"])
         if ros is None or ros["eligible_count"].strip() == "":
@@ -64,24 +112,30 @@ def _interview_domain_means(data_dir: Path) -> list[dict[str, str]]:
         elig = float(ros["eligible_count"])
         if elig <= 0:
             continue
-        by_dom[rec["interview_domain"]].append(float(rec["y"]) / elig)
-    rates = {}
+        by_dom[rec["interview_domain"]][int(rec["assigned"])].append(float(rec["y"]) / elig)
+    ate = {}
+    identified = set()
     for rec in census:
-        vals = by_dom.get(rec["domain_id"], [])
-        rates[rec["domain_id"]] = float(sum(vals) / len(vals)) if vals else 0.0
-    return _pack(census, rates)
+        arms = by_dom.get(rec["domain_id"], {0: [], 1: []})
+        if arms[0] and arms[1]:
+            identified.add(rec["domain_id"])
+            ate[rec["domain_id"]] = (sum(arms[1]) / len(arms[1])) - (sum(arms[0]) / len(arms[0]))
+        elif arms[0] or arms[1]:
+            ate[rec["domain_id"]] = 0.0
+    return _pack(census, ate, identified, always_fill=False)
 
 
-def _uncollapsed_listing_direct(data_dir: Path) -> list[dict[str, str]]:
+def _listing_domain_overlap(data_dir: Path) -> list[dict[str, str]]:
     listings = _read_csv(data_dir / "listings.csv")
     interviews = {rec["hh_id"]: rec for rec in _read_csv(data_dir / "interviews.csv")}
     roster = {rec["hh_id"]: rec for rec in _read_csv(data_dir / "roster.csv")}
     census = _read_csv(data_dir / "census_domains.csv")
-    num: dict[str, float] = defaultdict(float)
-    den: dict[str, float] = defaultdict(float)
+    by_dom: dict[str, dict[int, list[float]]] = defaultdict(lambda: {0: [], 1: []})
     for rec in listings:
         iv = interviews.get(rec["hh_id"])
         if iv is None or iv["responded"] != "1" or iv["y"].strip() == "":
+            continue
+        if iv.get("assigned", "") not in {"0", "1"}:
             continue
         ros = roster.get(rec["hh_id"])
         if ros is None or ros["eligible_count"].strip() == "":
@@ -89,26 +143,29 @@ def _uncollapsed_listing_direct(data_dir: Path) -> list[dict[str, str]]:
         elig = float(ros["eligible_count"])
         if elig <= 0:
             continue
-        w = float(rec["design_weight"])
-        num[rec["listing_domain"]] += w * float(iv["y"])
-        den[rec["listing_domain"]] += w * elig
-    rates = {}
+        by_dom[rec["listing_domain"]][int(iv["assigned"])].append(float(iv["y"]) / elig)
+    ate = {}
+    identified = set()
     for rec in census:
-        d = den.get(rec["domain_id"], 0.0)
-        rates[rec["domain_id"]] = (num[rec["domain_id"]] / d) if d > 0 else 0.0
-    return _pack(census, rates)
+        arms = by_dom.get(rec["domain_id"], {0: [], 1: []})
+        if arms[0] and arms[1]:
+            identified.add(rec["domain_id"])
+            ate[rec["domain_id"]] = (sum(arms[1]) / len(arms[1])) - (sum(arms[0]) / len(arms[0]))
+        elif arms[0] or arms[1]:
+            ate[rec["domain_id"]] = 0.0
+    return _pack(census, ate, identified, always_fill=False)
 
 
 def all_contrasts(data_dir: Path) -> bool:
     gold = estimate_rows(data_dir)
-    gold_rates = [row["est_rate"] for row in gold]
+    gold_key = [(row["status"], row["est_ate"]) for row in gold]
     rivals = (
-        _unweighted_means(data_dir),
-        _interview_domain_means(data_dir),
-        _uncollapsed_listing_direct(data_dir),
+        _ols_always_fill(data_dir),
+        _interview_domain_ols(data_dir),
+        _listing_domain_overlap(data_dir),
     )
     for rival in rivals:
-        rival_rates = [row["est_rate"] for row in rival]
-        if rival_rates == gold_rates:
+        rival_key = [(row["status"], row["est_ate"]) for row in rival]
+        if rival_key == gold_key:
             return False
     return True

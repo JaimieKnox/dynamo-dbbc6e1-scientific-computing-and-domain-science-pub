@@ -1,8 +1,8 @@
-artifacts = ["/app/output/domain_estimates.csv"]
+artifacts = ["/app/output/domain_contrasts.csv"]
 
 [task]
-name = "dynamo/domain-rates"
-description = "Publish finite-population domain rates and census-denominator totals from a two-stage household sample with nonresponse, a phase-two subsample, calibration, and composite small-area prediction."
+name = "dynamo/domain-ate"
+description = "Publish identified finite-population domain program contrasts from a two-stage household sample, leaving unidentified and empty domains blank."
 
 [metadata]
 category = "Scientific Computing and Domain Science"
@@ -11,16 +11,16 @@ model_tested = "Opus-4.8"
 agent_tested = "Terminus-2"
 task_objective = ["analyze", "generate"]
 artifact_type = ["dataset_or_tabular_file", "generated_output_artifact", "mathematical_or_scientific_model"]
-difficulty_explanation = "Survey methodologists and small-area statisticians are the practitioners who publish these domain estimates in the real world at census bureaus and national statistical offices. The microdata are synthetic two-stage household extracts split across listings, interviews, roster, and a listing-to-publish crosswalk, with duplicate listing rows, design weights, unit nonresponse, a phase-two outcome subsample, item missingness, census margins, and unsampled domains. Difficulty is composing sample construction with the unique estimand in /app/docs/CONTRACT.md, including which linearization and which non-iterative leverage-corrected moment realize A, without a fit-digest checker. Fit case_00 is a well-behaved identity-crosswalk extract where naive domain means look plausible, so a green schema check is not evidence that production is right. Production is a denser non-isomorphic archive: many-to-one domain recodes, listing multiplicity, and interview domains that disagree with listing domains. Nothing in the environment reports superpopulation parameters."
+difficulty_explanation = "Survey statisticians who publish finite-population program contrasts are the practitioners for this workflow. The microdata are synthetic two-stage household extracts split across listings, interviews, roster, and a listing-to-publish crosswalk, with duplicate listings, design weights, unit nonresponse, a phase-two subsample, item missingness, a binary program arm, and census domains that include empty and single-arm geographies. Difficulty is composing construction with positivity: overlap is evaluated on the published domain after collapse and crosswalk, not on interview geography or listing geography. Fit case_00 is a complete-response identity extract where an OLS gap looks plausible, so a fully populated numeric table is not evidence that production is right. Production densifies informative sampling, many-to-one recodes that can create overlap, listing multiplicity, and domains that must stay unidentified or empty. Nothing in the environment reports superpopulation parameters. There is no fit-digest checker."
 expert_time_estimate_hours = 3.0
-solution_explanation = "Collapse duplicate listings by lexicographic hh_id, psu, then list_seq, left-join interviews, take publish domain from the listing crosswalk, and drop phase-two households with no roster row. Build analysis weights as design weight times the urban-by-region unit-nonresponse factor times the phase-two factor, then apply linear g-weights to census household margins. Impute missing y with the unweighted tenure-by-urban observed mean. Form Hajek direct rates and with-replacement PSU linearized psi, fit calibrated WLS for the synthetic using census urban_share, estimate A with the Prasad and Rao 1990 moment formula truncated at 0, and publish gamma times direct plus one minus gamma times synthetic. Multiply the 6-decimal quantized rate by census eligible-person counts, then quantize totals to 2 decimals. Apply the same estimator to production /app/data. Best-case expert time is about 3 focused hours for a senior survey statistician who already knows the approach."
-verification_explanation = "Tests pin production inputs against a verifier-side copy under /tests/inputs/production, recompute the closed-form estimator independently, and require exact CSV equality on domain order, 6-decimal rates, and 2-decimal totals after the documented rate-first rounding. Exact match is appropriate because construction, weighting cells, linear g-weights, ratio linearization, WLS, and the leverage-corrected moment for A are determined functions of the inputs. Wrong-model contrasts for unweighted means, interview-domain tables, and uncollapsed listing directs must diverge. Fit cases must ship inputs only and must not ship a digest checker."
+solution_explanation = "Collapse duplicate listings, left-join interviews, take publish domain from the listing crosswalk, and drop phase-two households with no roster row. Build analysis weights as design weight times the urban-by-region unit-nonresponse factor times the phase-two factor, then apply linear g-weights to census household margins. Impute missing y with the unweighted tenure-by-urban observed mean. Mark a domain empty when it has no analysis household, unidentified when it lacks both program arms or a positive calibrated eligible-person total on either arm, and identified only when positivity holds on the published domain. For identified domains publish the Hajek treated-minus-control contrast and its with-replacement PSU linearized standard error. Leave numeric fields empty otherwise. Apply the same estimator to production /app/data. Best-case expert time is about 3 focused hours for a senior survey statistician who already knows the approach."
+verification_explanation = "Tests pin production inputs against a verifier-side copy under /tests/inputs/production, recompute the closed-form estimator independently, and require exact CSV equality on domain order, identification status, blank fields for empty and unidentified rows, and 6-decimal Hajek contrasts and cluster SEs. Exact match is appropriate because construction, positivity, linear g-weights, Hajek ratios, and the linearized contrast variance are determined functions of the inputs. Wrong-model contrasts for always-filled OLS, interview-domain overlap, and listing-domain overlap must diverge. Fit cases must ship inputs only and must not ship a digest checker."
 
 [verifier]
 timeout_sec = 180.0
 
 [agent]
-timeout_sec = 3600.0
+timeout_sec = 10800.0
 
 [environment]
 build_timeout_sec = 600.0

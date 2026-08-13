@@ -1,17 +1,17 @@
-"""Verifier for Vale domain publication outputs."""
+"""Verifier for Vale domain program-contrast outputs."""
 
 from __future__ import annotations
 
 import csv
 from pathlib import Path
 
-from estimator import estimate_rows, OUT_FIELDS
+from estimator import estimate_rows, OUT_FIELDS, STATUS_EMPTY, STATUS_UNIDENTIFIED
 from wrong_models import all_contrasts
 
 DATA = Path("/app/data")
 FIT = Path("/app/fit")
 OUT = Path("/app/output")
-TABLE = OUT / "domain_estimates.csv"
+TABLE = OUT / "domain_contrasts.csv"
 TESTS_PROD = Path("/tests/inputs/production")
 INPUT_FILES = (
     "listings.csv",
@@ -38,7 +38,7 @@ def test_production_inputs_match_verifier_copy():
 
 
 def test_output_file_is_ordinary():
-    """Success: /app/output/domain_estimates.csv is an ordinary non-symlink file."""
+    """Success: /app/output/domain_contrasts.csv is an ordinary non-symlink file."""
     assert TABLE.is_file()
     assert not TABLE.is_symlink()
 
@@ -53,22 +53,36 @@ def test_output_schema_and_census_order():
     assert [row["domain_id"] for row in actual] == [row["domain_id"] for row in census]
 
 
-def test_rates_match_contract():
-    """Success: est_rate matches the independently recomputed contract rates."""
+def test_status_and_blank_fields_match_contract():
+    """Success: identification status and blank numeric fields match the contract."""
     expected = estimate_rows(TESTS_PROD)
     actual = _read_csv(TABLE)
-    assert [row["est_rate"] for row in actual] == [row["est_rate"] for row in expected]
+    assert [row["status"] for row in actual] == [row["status"] for row in expected]
+    for row in actual:
+        if row["status"] in {STATUS_EMPTY, STATUS_UNIDENTIFIED}:
+            assert row["est_ate"] == ""
+            assert row["est_se"] == ""
+        else:
+            assert row["est_ate"] != ""
+            assert row["est_se"] != ""
 
 
-def test_totals_match_contract():
-    """Success: est_total matches the independently recomputed contract totals."""
+def test_ates_match_contract():
+    """Success: est_ate matches the independently recomputed Hajek contrasts."""
     expected = estimate_rows(TESTS_PROD)
     actual = _read_csv(TABLE)
-    assert [row["est_total"] for row in actual] == [row["est_total"] for row in expected]
+    assert [row["est_ate"] for row in actual] == [row["est_ate"] for row in expected]
+
+
+def test_ses_match_contract():
+    """Success: est_se matches the independently recomputed cluster linearized SEs."""
+    expected = estimate_rows(TESTS_PROD)
+    actual = _read_csv(TABLE)
+    assert [row["est_se"] for row in actual] == [row["est_se"] for row in expected]
 
 
 def test_wrong_model_contrasts_diverge():
-    """Success: unweighted, interview-domain, and uncollapsed-listing siblings diverge."""
+    """Success: OLS, interview-domain, and listing-domain overlap siblings diverge."""
     assert all_contrasts(TESTS_PROD) is True
 
 
@@ -83,5 +97,3 @@ def test_fit_inputs_have_no_expected_csvs():
             assert (case / name).is_file(), f"{case.name}/{name}"
         assert case.name.startswith("case_")
         assert case.name.removeprefix("case_").isdigit(), case.name
-    assert not (Path("/app/bin") / "sae_ref").exists()
-    assert not (Path("/app/bin") / "fit_hashes.json").exists()
