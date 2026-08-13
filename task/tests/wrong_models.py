@@ -156,6 +156,12 @@ def _listing_domain_overlap(data_dir: Path) -> list[dict[str, str]]:
     return _pack(census, ate, identified, always_fill=False)
 
 
+def _hajek_ratio_of_totals(data_dir: Path) -> list[dict[str, str]]:
+    from hajek_transcript import estimate_rows as hajek_rows
+
+    return hajek_rows(data_dir)
+
+
 def all_contrasts(data_dir: Path) -> bool:
     gold = estimate_rows(data_dir)
     gold_key = [(row["status"], row["est_ate"]) for row in gold]
@@ -163,6 +169,7 @@ def all_contrasts(data_dir: Path) -> bool:
         _ols_always_fill(data_dir),
         _interview_domain_ols(data_dir),
         _listing_domain_overlap(data_dir),
+        _hajek_ratio_of_totals(data_dir),
     )
     for rival in rivals:
         rival_key = [(row["status"], row["est_ate"]) for row in rival]

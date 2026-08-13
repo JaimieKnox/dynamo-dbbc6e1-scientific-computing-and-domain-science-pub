@@ -274,10 +274,26 @@ def estimate_rows(data_dir: Path) -> list[dict[str, str]]:
                 }
             )
             continue
-        t1 = sum(row["w"] * row["y"] for row in members if row["assigned"] == 1)
-        t0 = sum(row["w"] * row["y"] for row in members if row["assigned"] == 0)
-        r1 = t1 / e1
-        r0 = t0 / e0
+        w1 = sum(row["w"] for row in members if row["assigned"] == 1)
+        w0 = sum(row["w"] for row in members if row["assigned"] == 0)
+        if w1 <= 0.0 or w0 <= 0.0:
+            out.append(
+                {
+                    "domain_id": dom,
+                    "status": STATUS_UNIDENTIFIED,
+                    "est_ate": "",
+                    "est_se": "",
+                }
+            )
+            continue
+        r1 = (
+            sum(row["w"] * (row["y"] / row["eligible_count"]) for row in members if row["assigned"] == 1)
+            / w1
+        )
+        r0 = (
+            sum(row["w"] * (row["y"] / row["eligible_count"]) for row in members if row["assigned"] == 0)
+            / w0
+        )
         ate = r1 - r0
         z_psu: dict[tuple[str, str], float] = {}
         for stratum, psus in psu_by_stratum.items():
@@ -285,10 +301,11 @@ def estimate_rows(data_dir: Path) -> list[dict[str, str]]:
                 z_psu[(stratum, psu)] = 0.0
         for row in members:
             key = (row["stratum"], row["psu"])
+            rate = row["y"] / row["eligible_count"]
             if row["assigned"] == 1:
-                z_psu[key] += row["w"] * (row["y"] - r1 * row["eligible_count"]) / e1
+                z_psu[key] += row["w"] * (rate - r1) / w1
             else:
-                z_psu[key] -= row["w"] * (row["y"] - r0 * row["eligible_count"]) / e0
+                z_psu[key] -= row["w"] * (rate - r0) / w0
         var = 0.0
         for stratum, psus in psu_by_stratum.items():
             n_h = len(psus)

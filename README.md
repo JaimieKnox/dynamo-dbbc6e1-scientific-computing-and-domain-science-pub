@@ -4,7 +4,7 @@ Publish identified finite-population program contrasts from a synthetic two-stag
 
 ## Approach
 
-Construct analysis weights from collapsed listings, interviews, roster, and a listing-to-publish crosswalk. Publish a Hajek treated-minus-control contrast only when positivity holds on the published domain.
+Construct analysis weights from collapsed listings, interviews, roster, and a listing-to-publish crosswalk. Publish the analysis-weighted mean of household y per eligible person as treated minus control only when positivity holds on the published domain.
 
 ## Environment
 

@@ -68,7 +68,7 @@ def test_status_and_blank_fields_match_contract():
 
 
 def test_ates_match_contract():
-    """Success: est_ate matches the independently recomputed Hajek contrasts."""
+    """Success: est_ate matches the independently recomputed weighted mean-of-rates contrasts."""
     expected = estimate_rows(TESTS_PROD)
     actual = _read_csv(TABLE)
     assert [row["est_ate"] for row in actual] == [row["est_ate"] for row in expected]
@@ -82,7 +82,7 @@ def test_ses_match_contract():
 
 
 def test_wrong_model_contrasts_diverge():
-    """Success: OLS, interview-domain, and listing-domain overlap siblings diverge."""
+    """Success: transcript Hajek, OLS, interview-domain, and listing-domain siblings diverge."""
     assert all_contrasts(TESTS_PROD) is True
 
 
