@@ -1,6 +1,8 @@
 Publish domain rates and totals for the Vale household survey.
 
-Fit trees under `/app/fit/case_*/` ship the same input filenames as production. They do not ship expected CSVs. The digest-allowlisted check-only probe `/app/bin/sae_ref` may be used on those trees only. The unique published estimand, schema, rounding, and closed formulas are in `/app/docs/CONTRACT.md`.
+Fit trees under `/app/fit/case_*/` ship the same input filenames as production. They do not ship expected CSVs. The digest-allowlisted check-only probe `/app/bin/sae_ref` may be used on those trees only. The unique published estimand, schema, rounding, and sample-construction rules are in `/app/docs/CONTRACT.md`.
+
+Production `/app/data` is not an isomorphic copy of any fit tree. A script that only reproduces the allowlisted fit checks is not sufficient.
 
 Usage:
 

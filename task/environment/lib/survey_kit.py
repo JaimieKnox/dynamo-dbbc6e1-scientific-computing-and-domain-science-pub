@@ -6,16 +6,30 @@ import csv
 from pathlib import Path
 
 
-def read_households(data_dir: str | Path) -> list[dict[str, str]]:
-    path = Path(data_dir) / "households.csv"
+def _read(data_dir: str | Path, name: str) -> list[dict[str, str]]:
+    path = Path(data_dir) / name
     with path.open(newline="", encoding="utf-8") as handle:
         return list(csv.DictReader(handle))
+
+
+def read_listings(data_dir: str | Path) -> list[dict[str, str]]:
+    return _read(data_dir, "listings.csv")
+
+
+def read_interviews(data_dir: str | Path) -> list[dict[str, str]]:
+    return _read(data_dir, "interviews.csv")
+
+
+def read_roster(data_dir: str | Path) -> list[dict[str, str]]:
+    return _read(data_dir, "roster.csv")
+
+
+def read_crosswalk(data_dir: str | Path) -> list[dict[str, str]]:
+    return _read(data_dir, "domain_crosswalk.csv")
 
 
 def read_census(data_dir: str | Path) -> list[dict[str, str]]:
-    path = Path(data_dir) / "census_domains.csv"
-    with path.open(newline="", encoding="utf-8") as handle:
-        return list(csv.DictReader(handle))
+    return _read(data_dir, "census_domains.csv")
 
 
 def write_domain_csv(path: str | Path, rows: list[dict[str, str]]) -> None:

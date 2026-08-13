@@ -46,8 +46,66 @@ def region_dummy_names(regions: list[str]) -> tuple[str, list[str]]:
     return reference, included
 
 
+def _collapse_listings(listings: list[dict[str, str]]) -> list[dict[str, str]]:
+    ordered = sorted(listings, key=lambda r: (r["hh_id"], r["psu"], r.get("list_seq", "0")))
+    best: dict[str, dict[str, str]] = {}
+    for rec in ordered:
+        if rec["hh_id"] not in best:
+            best[rec["hh_id"]] = rec
+    return [best[hh] for hh in sorted(best)]
+
+
+def construct_sample(data_dir: Path) -> list[dict[str, str]]:
+    listings = _read_csv(data_dir / "listings.csv")
+    interviews = {rec["hh_id"]: rec for rec in _read_csv(data_dir / "interviews.csv")}
+    roster = {rec["hh_id"]: rec for rec in _read_csv(data_dir / "roster.csv")}
+    crosswalk = {
+        rec["listing_domain"]: rec["publish_domain"]
+        for rec in _read_csv(data_dir / "domain_crosswalk.csv")
+    }
+    if not listings:
+        raise ValueError("empty listings")
+    households = []
+    for rec in _collapse_listings(listings):
+        hh = rec["hh_id"]
+        iv = interviews.get(hh)
+        ros = roster.get(hh)
+        listing_domain = rec["listing_domain"]
+        publish = crosswalk.get(listing_domain)
+        if publish is None:
+            raise ValueError(f"missing crosswalk for {listing_domain}")
+        if iv is None:
+            responded = "0"
+            phase2 = "0"
+            y = ""
+            tenure = ""
+        else:
+            responded = iv["responded"]
+            phase2 = iv["phase2"]
+            y = iv["y"]
+            tenure = iv["tenure"]
+        eligible = ros["eligible_count"] if ros is not None else ""
+        households.append(
+            {
+                "hh_id": hh,
+                "stratum": rec["stratum"],
+                "psu": rec["psu"],
+                "domain_id": publish,
+                "region": rec["region"],
+                "urban": rec["urban"],
+                "tenure": tenure,
+                "design_weight": rec["design_weight"],
+                "responded": responded,
+                "phase2": phase2,
+                "y": y,
+                "eligible_count": eligible,
+            }
+        )
+    return households
+
+
 def load_tree(data_dir: Path) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
-    households = _read_csv(data_dir / "households.csv")
+    households = construct_sample(data_dir)
     census = _read_csv(data_dir / "census_domains.csv")
     if not households:
         raise ValueError("empty households")
@@ -111,13 +169,15 @@ def estimate_rows(data_dir: Path) -> list[dict[str, str]]:
 
     item_mean: dict[tuple[str, int], float] = {}
     for key, members in item_cells.items():
-        observed = [ _as_float(rec["y"]) for rec in members if not _missing_y(rec["y"])]
+        observed = [_as_float(rec["y"]) for rec in members if not _missing_y(rec["y"])]
         if observed:
             item_mean[key] = float(np.mean(np.asarray(observed, dtype=np.float64)))
 
     analysis: list[dict[str, Any]] = []
     for rec in phase2:
         key = (rec["tenure"], _as_int(rec["urban"]))
+        if rec["eligible_count"].strip() == "":
+            continue
         if _missing_y(rec["y"]):
             if key not in item_mean:
                 continue

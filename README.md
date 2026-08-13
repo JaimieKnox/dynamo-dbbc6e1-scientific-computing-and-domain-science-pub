@@ -4,7 +4,7 @@ Publish finite-population domain rates and census-denominator totals from a synt
 
 ## Approach
 
-Construct analysis weights from design weights, unit-nonresponse cells, a phase-two subsample, and linear calibration. Form ratio directs, a unit-level weighted-least-squares synthetic, and a Prasad-Rao composite, including empty domains.
+Construct analysis weights from collapsed listings, interviews, roster, a listing-to-publish crosswalk, unit-nonresponse cells, a phase-two subsample, and linear calibration. Form ratio directs, a unit-level weighted-least-squares synthetic, and a Prasad-Rao composite, including empty domains.
 
 ## Environment
 

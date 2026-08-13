@@ -17,6 +17,13 @@ OUT = Path("/app/output")
 TABLE = OUT / "domain_estimates.csv"
 SAE_REF = Path("/app/bin/sae_ref")
 TESTS_PROD = Path("/tests/inputs/production")
+INPUT_FILES = (
+    "listings.csv",
+    "interviews.csv",
+    "roster.csv",
+    "domain_crosswalk.csv",
+    "census_domains.csv",
+)
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:
@@ -26,7 +33,7 @@ def _read_csv(path: Path) -> list[dict[str, str]]:
 
 def test_production_inputs_match_verifier_copy():
     """Success: production inputs under /app/data match the verifier copy."""
-    for name in ("households.csv", "census_domains.csv"):
+    for name in INPUT_FILES:
         left = DATA / name
         right = TESTS_PROD / name
         assert left.is_file(), name
@@ -65,7 +72,7 @@ def test_totals_match_contract():
 
 
 def test_wrong_model_contrasts_diverge():
-    """Success: unweighted, mean-of-ratios, and always-direct siblings diverge."""
+    """Success: unweighted, interview-domain, and uncollapsed-listing siblings diverge."""
     assert all_contrasts(TESTS_PROD) is True
 
 
@@ -104,8 +111,8 @@ def test_sae_ref_accepts_correct_fit_and_rejects_mutated_tree():
     with tempfile.TemporaryDirectory(dir="/tmp") as td:
         dst = Path(td) / "mutated"
         shutil.copytree(src, dst)
-        text = (dst / "households.csv").read_text(encoding="utf-8")
-        (dst / "households.csv").write_text(text + "\n", encoding="utf-8")
+        text = (dst / "listings.csv").read_text(encoding="utf-8")
+        (dst / "listings.csv").write_text(text + "\n", encoding="utf-8")
         proc = subprocess.run(
             [str(SAE_REF), "check", str(dst), "/tmp/sae_ref_mut_out"],
             capture_output=True,
@@ -123,7 +130,7 @@ def test_fit_inputs_have_no_expected_csvs():
     assert len(cases) >= 10
     for case in cases:
         assert not (case / "expected").exists(), case.name
-        assert (case / "households.csv").is_file(), case.name
-        assert (case / "census_domains.csv").is_file(), case.name
+        for name in INPUT_FILES:
+            assert (case / name).is_file(), f"{case.name}/{name}"
         assert case.name.startswith("case_")
         assert case.name.removeprefix("case_").isdigit(), case.name

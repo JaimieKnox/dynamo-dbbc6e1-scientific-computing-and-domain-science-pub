@@ -9,7 +9,13 @@ import sys
 from pathlib import Path
 
 HASH_PATH = Path("/app/bin/fit_hashes.json")
-NEEDED = ("households.csv", "census_domains.csv")
+NEEDED = (
+    "listings.csv",
+    "interviews.csv",
+    "roster.csv",
+    "domain_crosswalk.csv",
+    "census_domains.csv",
+)
 OUT_NAME = "domain_estimates.csv"
 
 
