@@ -12,7 +12,7 @@ Read these files from the chosen data root:
 - `domain_crosswalk.csv` columns `listing_domain,publish_domain`
 - `census_domains.csv` columns `domain_id,region,urban_share,hh_count_census,urban_hh_count_census,eligible_count_census`
 
-`urban` is `0` or `1`. `responded`, `phase2`, and `assigned` are `0` or `1`. Empty `y` is item missing. `assigned` is the household program arm. `list_seq` is a listing-pass index.
+`urban` is `0` or `1`. `responded`, `phase2`, and `assigned` are `0` or `1`. Empty `y` is item missing. `assigned` is the household program arm. `list_seq` is a listing-pass index. The closed region set is the sorted unique `region` values in `census_domains.csv`. The reference region is the lexicographically last of those values. Region columns used in calibration are the other codes, in lexicographic order.
 
 ## Analysis sample
 
@@ -34,11 +34,11 @@ Numeric contrast fields are published only for `identified` domains. Other rows 
 
 ## Weights and contrast
 
-Analysis weights start from the design weight, then the two urban-by-region response adjustments, then a single linear calibration of household analysis weights to census household margins on the analysis sample.
+Analysis weights start from the design weight, then the two urban-by-region response adjustments, then a single linear calibration of household analysis weights to census household margins on the analysis sample. The calibration columns are an intercept, household `urban`, and the included region columns. The margin vector is `hh_count_census` for the intercept, `urban_hh_count_census` for urban, and `hh_count_census` summed over census domains in each included region.
 
 For an identified domain the arm mean is the sum of `w * (y / eligible_count)` divided by the sum of `w`, over analysis households in that arm, where `w` is the analysis weight. The published contrast is treated minus control.
 
-The standard error is a design-based with-replacement PSU linearized standard error of that contrast. Do not apply a finite-population correction.
+The standard error is the with-replacement PSU linearized standard error of that contrast, treating the calibrated analysis weights as fixed. Stratum PSU counts use distinct `psu` values on the collapsed listings, including PSUs that contribute nothing to a given domain. Duplicate listing rows that were dropped do not add PSUs. Do not apply a finite-population correction.
 
 ## Output
 
