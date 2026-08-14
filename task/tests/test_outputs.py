@@ -81,39 +81,9 @@ def test_ses_match_contract():
     assert [row["est_se"] for row in actual] == [row["est_se"] for row in expected]
 
 
-def test_arm_mean_example_forbids_ratio_of_totals():
-    """Success: the disclosed arm-mean instance matches the closed form and not ratio of totals."""
-    rows = _read_csv(Path("/app/docs/arm_mean_example.csv"))
-    published = {row["field"]: row["value"] for row in _read_csv(Path("/app/docs/arm_mean_published.csv"))}
-    by_arm: dict[str, list[tuple[float, float, float]]] = {"0": [], "1": []}
-    for rec in rows:
-        by_arm[rec["assigned"]].append(
-            (float(rec["w"]), float(rec["y"]), float(rec["eligible_count"]))
-        )
-
-    def mean_of_rates(arm: str) -> float:
-        members = by_arm[arm]
-        wsum = sum(w for w, _y, _e in members)
-        return sum(w * (y / e) for w, y, e in members) / wsum
-
-    def ratio_of_totals(arm: str) -> float:
-        members = by_arm[arm]
-        return sum(w * y for w, y, _e in members) / sum(w * e for w, _y, e in members)
-
-    r1 = mean_of_rates("1")
-    r0 = mean_of_rates("0")
-    ate = r1 - r0
-    rival = ratio_of_totals("1") - ratio_of_totals("0")
-    assert published["treated_arm_mean"] == f"{r1:.6f}"
-    assert published["control_arm_mean"] == f"{r0:.6f}"
-    assert published["est_ate"] == f"{ate:.6f}"
-    assert rival != ate
-
-
 def test_wrong_model_contrasts_diverge():
     """Success: transcript Hajek, OLS, interview-domain, and listing-domain siblings diverge."""
     assert all_contrasts(TESTS_PROD) is True
-
 
 
 def test_fit_inputs_have_no_expected_csvs():

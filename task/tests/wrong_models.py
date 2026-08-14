@@ -162,7 +162,12 @@ def _hajek_ratio_of_totals(data_dir: Path) -> list[dict[str, str]]:
     return hajek_rows(data_dir)
 
 
-def all_contrasts(data_dir: Path) -> bool:
+GRADED_PROD = Path("/app/data")
+
+
+def all_contrasts(data_dir: Path | None = None) -> bool:
+    if data_dir is None:
+        data_dir = GRADED_PROD
     gold = estimate_rows(data_dir)
     gold_key = [(row["status"], row["est_ate"]) for row in gold]
     rivals = (

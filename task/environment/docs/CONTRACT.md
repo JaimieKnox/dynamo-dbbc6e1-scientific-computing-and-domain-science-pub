@@ -36,7 +36,7 @@ Numeric contrast fields are published only for `identified` domains. Other rows 
 
 Analysis weights start from design weight times the two urban-by-region response factors, then a linear g-weight to census household margins on the analysis sample. The g-weight columns are an intercept, household `urban`, and the included region columns. The margin vector is `hh_count_census` for the intercept, `urban_hh_count_census` for urban, and `hh_count_census` summed over census domains in each included region.
 
-For an identified domain the arm mean is the sum of `w * (y / eligible_count)` divided by the sum of `w`, over analysis households in that arm, where `w` is the analysis weight. It is not the ratio of the weighted total of `y` to the weighted total of `eligible_count`. `/app/docs/arm_mean_example.csv` is a worked instance of that arm-mean rule. `/app/docs/arm_mean_published.csv` records the unique arm means and contrast for that instance. The published contrast is treated minus control.
+For an identified domain the arm mean is the sum of `w * (y / eligible_count)` divided by the sum of `w`, over analysis households in that arm, where `w` is the analysis weight. The published contrast is treated minus control.
 
 The standard error is the square root of the with-replacement PSU linearized variance of that contrast. Stratum PSU counts use distinct `psu` values on the collapsed listings, including PSUs that contribute nothing to a given domain. Duplicate listing rows that were dropped do not add PSUs. Shipped strata each have at least two collapsed PSUs. Do not apply a finite-population correction.
 
