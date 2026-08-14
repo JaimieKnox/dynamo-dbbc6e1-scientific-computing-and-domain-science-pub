@@ -12,15 +12,15 @@ Read these files from the chosen data root:
 - `domain_crosswalk.csv` columns `listing_domain,publish_domain`
 - `census_domains.csv` columns `domain_id,region,urban_share,hh_count_census,urban_hh_count_census,eligible_count_census`
 
-`urban` is `0` or `1`. `responded`, `phase2`, and `assigned` are `0` or `1`. Empty `y` is item missing. `assigned` is the household program arm. `list_seq` is a listing-pass index. The closed region set is the sorted unique `region` values in `census_domains.csv`. The reference region is the lexicographically last of those values. Region columns used in calibration are the other codes, in lexicographic order.
+`urban` is `0` or `1`. `responded`, `phase2`, and `assigned` are `0` or `1`. Empty `y` is item missing. `assigned` is the household program arm. `list_seq` is a listing-pass index.
 
 ## Analysis sample
 
-A household may appear more than once in `listings.csv`. Collapse to one row per `hh_id` using the first listing pass.
+A household may appear more than once in `listings.csv`. Collapse to one row per `hh_id`.
 
 Attach interviews by `hh_id`. A listing with no interview is a unit nonrespondent and stays in the listing sample used for nonresponse cells. The published domain of a household is the `publish_domain` of its `listing_domain`. Status, emptiness, and the contrast use that published domain. `listing_domain` and `interview_domain` are not the published domain. Eligible counts come from `roster.csv`. A phase-two household with no roster row is out of the analysis sample.
 
-Unit-nonresponse and phase-two response are adjusted on urban-by-region cells of the collapsed listings. The unique cell factors are those that reproduce every fit published table. Item completion uses the unweighted mean of observed `y` in tenure-by-urban cells among remaining phase-two households. A household with no observed `y` in its item cell, or with `assigned` other than `0` or `1`, is out of the analysis sample. Households with `phase2=0` are out of the analysis sample.
+Unit-nonresponse, phase-two response, item completion, and the linear calibration of household analysis weights to census household margins are determined by the unique construction that reproduces every fit published table. A household with no completed `y`, or with `assigned` other than `0` or `1`, is out of the analysis sample. Households with `phase2=0` are out of the analysis sample.
 
 ## Identification
 
@@ -34,11 +34,9 @@ Numeric contrast fields are published only for `identified` domains. Other rows 
 
 ## Weights and contrast
 
-Analysis weights start from the design weight, then the two urban-by-region response adjustments, then a single linear calibration of household analysis weights to census household margins on the analysis sample. The calibration columns are an intercept, household `urban`, and the included region columns. The margin vector is `hh_count_census` for the intercept, `urban_hh_count_census` for urban, and `hh_count_census` summed over census domains in each included region.
+Analysis weights start from the design weight, then the unique response adjustments and unique linear calibration recovered from the fit published tables.
 
-For an identified domain the arm mean is the sum of `w * (y / eligible_count)` divided by the sum of `w`, over analysis households in that arm, where `w` is the analysis weight. The published contrast is treated minus control.
-
-The standard error is the with-replacement PSU linearized standard error of that contrast, treating the calibrated analysis weights as fixed. Stratum PSU counts use distinct `psu` values on the collapsed listings, including PSUs that contribute nothing to a given domain. Duplicate listing rows that were dropped do not add PSUs. Do not apply a finite-population correction.
+For an identified domain the arm mean is the sum of `w * (y / eligible_count)` divided by the sum of `w`, over analysis households in that arm, where `w` is the analysis weight. The published contrast is treated minus control. The published standard error is the unique with-replacement cluster linearized standard error of that contrast that reproduces every fit published table.
 
 ## Output
 

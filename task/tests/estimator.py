@@ -150,10 +150,17 @@ def _cell_factor(
     return num / den
 
 
-def estimate_rows(data_dir: Path, *, weighted_response: bool = False) -> list[dict[str, str]]:
+def estimate_rows(
+    data_dir: Path,
+    *,
+    weighted_response: bool = False,
+    include_regions: bool = True,
+) -> list[dict[str, str]]:
     households, census = load_tree(data_dir)
     reference, included = region_dummy_names([row["region"] for row in census])
     _ = reference
+    if not include_regions:
+        included = []
 
     sampled_cells: dict[tuple[int, str], list[dict[str, str]]] = {}
     for rec in households:
