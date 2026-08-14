@@ -8,7 +8,7 @@ Construct analysis weights from collapsed listings, interviews, roster, and a li
 
 ## Environment
 
-Python 3.13 with numpy. Survey extracts live under `/app/data` and `/app/fit/case_*/`. The estimand is `/app/docs/CONTRACT.md`.
+Python 3.13 with numpy. Survey extracts live under `/app/data` and `/app/fit/case_*/`. Fit trees include published worked tables. The estimand is `/app/docs/CONTRACT.md`.
 
 ## Verification
 

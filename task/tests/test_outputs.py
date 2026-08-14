@@ -82,12 +82,12 @@ def test_ses_match_contract():
 
 
 def test_wrong_model_contrasts_diverge():
-    """Success: transcript Hajek, OLS, interview-domain, and listing-domain siblings diverge."""
+    """Success: Hajek, OLS, interview-domain, listing-domain, and weighted-NR siblings diverge."""
     assert all_contrasts(TESTS_PROD) is True
 
 
-def test_fit_inputs_have_no_expected_csvs():
-    """Success: agent-visible fit cases ship inputs only."""
+def test_fit_cases_ship_worked_tables():
+    """Success: agent-visible fit cases ship inputs plus a published worked table."""
     assert FIT.is_dir()
     cases = sorted(path for path in FIT.iterdir() if path.is_dir())
     assert len(cases) >= 10
@@ -95,5 +95,8 @@ def test_fit_inputs_have_no_expected_csvs():
         assert not (case / "expected").exists(), case.name
         for name in INPUT_FILES:
             assert (case / name).is_file(), f"{case.name}/{name}"
+        published = case / "domain_contrasts.csv"
+        assert published.is_file(), f"{case.name}/domain_contrasts.csv"
+        assert not published.is_symlink(), case.name
         assert case.name.startswith("case_")
         assert case.name.removeprefix("case_").isdigit(), case.name

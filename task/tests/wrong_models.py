@@ -162,6 +162,10 @@ def _hajek_ratio_of_totals(data_dir: Path) -> list[dict[str, str]]:
     return hajek_rows(data_dir)
 
 
+def _weighted_response_factors(data_dir: Path) -> list[dict[str, str]]:
+    return estimate_rows(data_dir, weighted_response=True)
+
+
 GRADED_PROD = Path("/app/data")
 
 
@@ -175,6 +179,7 @@ def all_contrasts(data_dir: Path | None = None) -> bool:
         _interview_domain_ols(data_dir),
         _listing_domain_overlap(data_dir),
         _hajek_ratio_of_totals(data_dir),
+        _weighted_response_factors(data_dir),
     )
     for rival in rivals:
         rival_key = [(row["status"], row["est_ate"]) for row in rival]

@@ -1,6 +1,6 @@
 # Vale domain program-contrast contract
 
-This file is the unique published estimand. Fit trees under `/app/fit/case_*/` ship the same input filenames as production. They do not ship published tables. They are unlabeled extracts for schema and construction. Production grading uses `/app/data` only. That production tree is not an isomorphic copy of any single fit tree.
+This file is the unique published estimand. Fit trees under `/app/fit/case_*/` ship the same input filenames as production plus a published `domain_contrasts.csv` worked example. They are unlabeled extracts for schema and construction. Production grading uses `/app/data` only. That production tree is not an isomorphic copy of any single fit tree. Copying a fit table onto production does not satisfy the contract.
 
 ## Inputs
 
@@ -20,7 +20,7 @@ A household may appear more than once in `listings.csv`. Collapse to one row per
 
 Attach interviews by `hh_id`. A listing with no interview is a unit nonrespondent and stays in the listing sample used for nonresponse cells. The published domain of a household is the `publish_domain` of its `listing_domain`. Status, emptiness, and the contrast use that published domain. `listing_domain` and `interview_domain` are not the published domain. Eligible counts come from `roster.csv`. A phase-two household with no roster row is out of the analysis sample.
 
-Unit-nonresponse and phase-two response are adjusted on urban-by-region cells of the collapsed listings. Item completion uses the unweighted mean of observed `y` in tenure-by-urban cells among remaining phase-two households. A household with no observed `y` in its item cell, or with `assigned` other than `0` or `1`, is out of the analysis sample. Households with `phase2=0` are out of the analysis sample.
+Unit-nonresponse and phase-two response are adjusted on urban-by-region cells of the collapsed listings. The unique cell factors are those that reproduce every fit published table. Item completion uses the unweighted mean of observed `y` in tenure-by-urban cells among remaining phase-two households. A household with no observed `y` in its item cell, or with `assigned` other than `0` or `1`, is out of the analysis sample. Households with `phase2=0` are out of the analysis sample.
 
 ## Identification
 

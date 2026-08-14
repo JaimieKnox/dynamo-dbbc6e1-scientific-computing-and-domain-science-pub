@@ -133,7 +133,24 @@ def _design_matrix_rows(
     return np.asarray(rows, dtype=np.float64)
 
 
-def estimate_rows(data_dir: Path) -> list[dict[str, str]]:
+def _cell_factor(
+    members: list[dict[str, str]],
+    pred,
+    *,
+    weighted: bool,
+) -> float:
+    if weighted:
+        num = sum(_as_float(rec["design_weight"]) for rec in members)
+        den = sum(_as_float(rec["design_weight"]) for rec in members if pred(rec))
+    else:
+        num = float(len(members))
+        den = float(sum(1 for rec in members if pred(rec)))
+    if den <= 0:
+        raise ValueError("empty response cell")
+    return num / den
+
+
+def estimate_rows(data_dir: Path, *, weighted_response: bool = False) -> list[dict[str, str]]:
     households, census = load_tree(data_dir)
     reference, included = region_dummy_names([row["region"] for row in census])
     _ = reference
@@ -145,11 +162,11 @@ def estimate_rows(data_dir: Path) -> list[dict[str, str]]:
 
     nr_factor: dict[tuple[int, str], float] = {}
     for key, members in sampled_cells.items():
-        n_sampled = len(members)
-        n_resp = sum(_as_int(rec["responded"]) for rec in members)
-        if n_resp <= 0:
-            raise ValueError(f"empty NR cell {key}")
-        nr_factor[key] = n_sampled / n_resp
+        nr_factor[key] = _cell_factor(
+            members,
+            lambda rec: _as_int(rec["responded"]) == 1,
+            weighted=weighted_response,
+        )
 
     respondents = [rec for rec in households if _as_int(rec["responded"]) == 1]
     resp_cells: dict[tuple[int, str], list[dict[str, str]]] = {}
@@ -159,11 +176,11 @@ def estimate_rows(data_dir: Path) -> list[dict[str, str]]:
 
     phase2_factor: dict[tuple[int, str], float] = {}
     for key, members in resp_cells.items():
-        n_resp = len(members)
-        n_p2 = sum(_as_int(rec["phase2"]) for rec in members)
-        if n_p2 <= 0:
-            raise ValueError(f"empty phase2 cell {key}")
-        phase2_factor[key] = n_resp / n_p2
+        phase2_factor[key] = _cell_factor(
+            members,
+            lambda rec: _as_int(rec["phase2"]) == 1,
+            weighted=weighted_response,
+        )
 
     phase2 = [rec for rec in respondents if _as_int(rec["phase2"]) == 1]
 
