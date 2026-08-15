@@ -20,7 +20,7 @@ A household may appear more than once in `listings.csv`. Collapse to one row per
 
 Attach interviews by `hh_id`. A listing with no interview is a unit nonrespondent and stays in the listing sample used for nonresponse cells. The published domain of a household is the `publish_domain` of its `listing_domain`. Status, emptiness, and the contrast use that published domain. `listing_domain` and `interview_domain` are not the published domain. Eligible counts come from `roster.csv`. A phase-two household with no roster row is out of the analysis sample.
 
-Unit-nonresponse, phase-two response, item completion, and the linear calibration of household analysis weights to census household margins are determined by the unique construction that reproduces every fit published table. A household with no completed `y`, or with `assigned` other than `0` or `1`, is out of the analysis sample. Households with `phase2=0` are out of the analysis sample.
+Unit-nonresponse, phase-two response, item completion, and the linear calibration of household analysis weights to census household margins are determined by the unique construction that reproduces every fit published table. Item completion fills missing `y` before the analysis sample is closed. A household that still has no `y` after that completion, or with `assigned` other than `0` or `1`, is out of the analysis sample. Households with `phase2=0` are out of the analysis sample. Do not drop a household solely because `y` was missing before item completion.
 
 ## Identification
 
