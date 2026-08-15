@@ -170,6 +170,10 @@ def _greg_without_region_dummies(data_dir: Path) -> list[dict[str, str]]:
     return estimate_rows(data_dir, include_regions=False)
 
 
+def _drop_empty_item_cell(data_dir: Path) -> list[dict[str, str]]:
+    return estimate_rows(data_dir, item_urban_fallback=False)
+
+
 GRADED_PROD = Path("/app/data")
 
 
@@ -185,6 +189,7 @@ def all_contrasts(data_dir: Path | None = None) -> bool:
         _hajek_ratio_of_totals(data_dir),
         _weighted_response_factors(data_dir),
         _greg_without_region_dummies(data_dir),
+        _drop_empty_item_cell(data_dir),
     )
     for rival in rivals:
         rival_key = [(row["status"], row["est_ate"]) for row in rival]

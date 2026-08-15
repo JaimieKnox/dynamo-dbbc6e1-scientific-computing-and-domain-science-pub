@@ -82,7 +82,7 @@ def test_ses_match_contract():
 
 
 def test_wrong_model_contrasts_diverge():
-    """Success: Hajek, OLS, interview-domain, listing-domain, weighted-NR, and no-region GREG siblings diverge."""
+    """Success: Hajek, OLS, interview-domain, listing-domain, weighted-NR, no-region GREG, and drop-empty-item siblings diverge."""
     assert all_contrasts(TESTS_PROD) is True
 
 

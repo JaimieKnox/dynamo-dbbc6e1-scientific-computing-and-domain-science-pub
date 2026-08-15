@@ -155,6 +155,7 @@ def estimate_rows(
     *,
     weighted_response: bool = False,
     include_regions: bool = True,
+    item_urban_fallback: bool = True,
 ) -> list[dict[str, str]]:
     households, census = load_tree(data_dir)
     reference, included = region_dummy_names([row["region"] for row in census])
@@ -202,6 +203,15 @@ def estimate_rows(
         if observed:
             item_mean[key] = float(np.mean(np.asarray(observed, dtype=np.float64)))
 
+    urban_mean: dict[int, float] = {}
+    if item_urban_fallback:
+        urban_obs: dict[int, list[float]] = {}
+        for rec in phase2:
+            if not _missing_y(rec["y"]):
+                urban_obs.setdefault(_as_int(rec["urban"]), []).append(_as_float(rec["y"]))
+        for urban, vals in urban_obs.items():
+            urban_mean[urban] = float(np.mean(np.asarray(vals, dtype=np.float64)))
+
     analysis: list[dict[str, Any]] = []
     for rec in phase2:
         if rec["assigned"].strip() not in {"0", "1"}:
@@ -210,9 +220,15 @@ def estimate_rows(
             continue
         key = (rec["tenure"], _as_int(rec["urban"]))
         if _missing_y(rec["y"]):
-            if key not in item_mean:
+            if key in item_mean:
+                y_val = item_mean[key]
+            elif item_urban_fallback:
+                urban = _as_int(rec["urban"])
+                if urban not in urban_mean:
+                    continue
+                y_val = urban_mean[urban]
+            else:
                 continue
-            y_val = item_mean[key]
         else:
             y_val = _as_float(rec["y"])
         nr_key = (_as_int(rec["urban"]), rec["region"])

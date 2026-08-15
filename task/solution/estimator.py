@@ -178,6 +178,15 @@ def estimate_rows(data_dir: Path) -> list[dict[str, str]]:
         if observed:
             item_mean[key] = float(np.mean(np.asarray(observed, dtype=np.float64)))
 
+    urban_obs: dict[int, list[float]] = {}
+    for rec in phase2:
+        if not _missing_y(rec["y"]):
+            urban_obs.setdefault(_as_int(rec["urban"]), []).append(_as_float(rec["y"]))
+    urban_mean = {
+        urban: float(np.mean(np.asarray(vals, dtype=np.float64)))
+        for urban, vals in urban_obs.items()
+    }
+
     analysis: list[dict[str, Any]] = []
     for rec in phase2:
         if rec["assigned"].strip() not in {"0", "1"}:
@@ -186,9 +195,13 @@ def estimate_rows(data_dir: Path) -> list[dict[str, str]]:
             continue
         key = (rec["tenure"], _as_int(rec["urban"]))
         if _missing_y(rec["y"]):
-            if key not in item_mean:
-                continue
-            y_val = item_mean[key]
+            if key in item_mean:
+                y_val = item_mean[key]
+            else:
+                urban = _as_int(rec["urban"])
+                if urban not in urban_mean:
+                    continue
+                y_val = urban_mean[urban]
         else:
             y_val = _as_float(rec["y"])
         nr_key = (_as_int(rec["urban"]), rec["region"])
