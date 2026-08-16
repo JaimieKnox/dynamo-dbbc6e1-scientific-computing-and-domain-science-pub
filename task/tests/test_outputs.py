@@ -42,6 +42,13 @@ def test_output_file_is_ordinary():
     assert not TABLE.is_symlink()
 
 
+def test_output_uses_lf_newlines():
+    """Success: output bytes use LF newlines and contain no carriage returns."""
+    raw = TABLE.read_bytes()
+    assert b"\n" in raw
+    assert b"\r" not in raw
+
+
 def test_output_schema_and_census_order():
     """Success: header and domain order match the census frame."""
     with TABLE.open(newline="", encoding="utf-8") as handle:

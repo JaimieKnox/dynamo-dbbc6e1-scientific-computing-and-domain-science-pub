@@ -15,7 +15,7 @@ Days are integers. `event_type` is `0` for a censored exit, `1` for the event of
 
 ## Analysis time
 
-Time is days since onset. A household enters the risk set after it is listed. It is at risk on day `t` when `listing_day - onset_day < t <= event_day - onset_day`. Origin time is not listing time. A household listed after the horizon does not enter the risk set.
+Time is days since onset. A household enters the risk set after it is listed. It is at risk on day `t` when `listing_day - onset_day < t <= event_day - onset_day`. Origin time is not listing time. A household listed after the horizon does not enter the risk set. A household listed before onset, or with an event before listing, does not enter the risk set.
 
 ## Horizon and competing events
 
