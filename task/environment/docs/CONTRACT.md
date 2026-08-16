@@ -1,47 +1,42 @@
-# Vale domain program-contrast contract
+# Vale domain cumulative incidence contract
 
-This file is the unique published estimand. Fit trees under `/app/fit/case_*/` ship the same input filenames as production plus a published `domain_contrasts.csv` worked example. They are unlabeled extracts for schema and construction. Production grading uses `/app/data` only. That production tree is not an isomorphic copy of any single fit tree. Copying a fit table onto production does not satisfy the contract.
+This file is the unique published estimand. Fit trees under `/app/fit/case_*/` ship the same input filenames as production plus a published `domain_cif.csv` worked example. They are unlabeled extracts for schema and construction. Production grading uses `/app/data` only. That production tree is not an isomorphic copy of any single fit tree. Copying a fit table onto production does not satisfy the contract.
 
 ## Inputs
 
 Read these files from the chosen data root:
 
-- `listings.csv` columns `hh_id,stratum,psu,listing_domain,region,urban,design_weight,list_seq`
-- `interviews.csv` columns `hh_id,responded,phase2,y,tenure,assigned,interview_domain`
-- `roster.csv` columns `hh_id,eligible_count`
+- `listings.csv` columns `hh_id,listing_domain`
+- `events.csv` columns `hh_id,onset_day,listing_day,event_day,event_type,report_domain`
 - `domain_crosswalk.csv` columns `listing_domain,publish_domain`
-- `census_domains.csv` columns `domain_id,region,urban_share,hh_count_census,urban_hh_count_census,eligible_count_census`
+- `census_domains.csv` column `domain_id`
 
-`urban` is `0` or `1`. `responded`, `phase2`, and `assigned` are `0` or `1`. Empty `y` is item missing. `assigned` is the household program arm. `list_seq` is a listing-pass index.
+Days are integers. `event_type` is `0` for a censored exit, `1` for the event of interest, or `2` for a competing event. `report_domain` is not the published domain.
 
-## Analysis sample
+## Analysis time
 
-A household may appear more than once in `listings.csv`. Collapse to one row per `hh_id`.
+Time is days since onset. A household enters the risk set after it is listed. It is at risk on day `t` when `listing_day - onset_day < t <= event_day - onset_day`. Origin time is not listing time. A household listed after the horizon does not enter the risk set.
 
-Attach interviews by `hh_id`. A listing with no interview is a unit nonrespondent and stays in the listing sample used for nonresponse cells. The published domain of a household is the `publish_domain` of its `listing_domain`. Status, emptiness, and the contrast use that published domain. `listing_domain` and `interview_domain` are not the published domain. Eligible counts come from `roster.csv`. A phase-two household with no roster row is out of the analysis sample.
+## Horizon and competing events
 
-Unit-nonresponse, phase-two response, item completion, and the linear calibration of household analysis weights to census household margins are determined by the unique construction that reproduces every fit published table. Item completion fills missing `y` before the analysis sample is closed. The unique completion cells are those that reproduce every fit published table. When a household's completion cell has no observed `y`, fill from the observed mean of the same urban class. A household that still has no `y` after that completion, or with `assigned` other than `0` or `1`, is out of the analysis sample. Households with `phase2=0` are out of the analysis sample. Do not drop a household solely because `y` was missing before item completion.
+The published incidence is the cumulative incidence of event type `1` at day 90 in the presence of event type `2`. Treating type `2` as independent censoring is not the published incidence. Type `0` is censoring.
+
+The unique hazard increments, product-limit survival through both event types, and person linearized standard error are the construction that reproduces every fit published table.
 
 ## Identification
 
-Status is evaluated on the published domain of the analysis sample.
+The published domain of a household is the `publish_domain` of its `listing_domain`. `listing_domain` and `report_domain` are not the published domain.
 
-- `empty`: no analysis household in that published domain
-- `unidentified`: at least one analysis household, but not both program arms, or either arm has a calibrated eligible-person total that is not strictly positive
-- `identified`: both arms are present and both calibrated eligible-person totals are strictly positive
+- `empty`: no event household in that published domain
+- `unidentified`: at least one household, but none enter the risk set before day 90
+- `identified`: at least one household is at risk on some day `t` with `1 <= t <= 90`
 
-Numeric contrast fields are published only for `identified` domains. Other rows leave those fields empty.
-
-## Weights and contrast
-
-Analysis weights start from the design weight, then the unique response adjustments and unique linear calibration recovered from the fit published tables.
-
-For an identified domain the arm mean is the sum of `w * (y / eligible_count)` divided by the sum of `w`, over analysis households in that arm, where `w` is the analysis weight. The published contrast is treated minus control. The published standard error is the unique with-replacement cluster linearized standard error of that contrast that reproduces every fit published table.
+Numeric fields are published only for `identified` domains. Other rows leave those fields empty.
 
 ## Output
 
-Write `/app/output/domain_contrasts.csv` as an ordinary non-symlink file with header
+Write `/app/output/domain_cif.csv` as an ordinary non-symlink file with header
 
-`domain_id,status,est_ate,est_se`
+`domain_id,status,est_cif,est_se`
 
-One row per census domain, in `census_domains.csv` order. `status` is `identified`, `unidentified`, or `empty`. For `identified` rows, quantize `est_ate` and `est_se` independently to 6 decimal places with round-half-even. For `unidentified` and `empty` rows, leave `est_ate` and `est_se` as empty fields. Use LF newlines. `/app/lib/survey_kit.py` is exploration IO only and is not a graded builder.
+One row per census domain, in `census_domains.csv` order. `status` is `identified`, `unidentified`, or `empty`. For `identified` rows, quantize `est_cif` and `est_se` independently to 6 decimal places with round-half-even. For `unidentified` and `empty` rows, leave `est_cif` and `est_se` as empty fields. Use LF newlines. `/app/lib/survey_kit.py` is exploration IO only and is not a graded builder.

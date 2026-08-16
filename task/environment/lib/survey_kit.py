@@ -16,12 +16,8 @@ def read_listings(data_dir: str | Path) -> list[dict[str, str]]:
     return _read(data_dir, "listings.csv")
 
 
-def read_interviews(data_dir: str | Path) -> list[dict[str, str]]:
-    return _read(data_dir, "interviews.csv")
-
-
-def read_roster(data_dir: str | Path) -> list[dict[str, str]]:
-    return _read(data_dir, "roster.csv")
+def read_events(data_dir: str | Path) -> list[dict[str, str]]:
+    return _read(data_dir, "events.csv")
 
 
 def read_crosswalk(data_dir: str | Path) -> list[dict[str, str]]:
@@ -35,7 +31,7 @@ def read_census(data_dir: str | Path) -> list[dict[str, str]]:
 def write_domain_csv(path: str | Path, rows: list[dict[str, str]]) -> None:
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
-    fields = ["domain_id", "status", "est_ate", "est_se"]
+    fields = ["domain_id", "status", "est_cif", "est_se"]
     with out.open("w", newline="\n", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields, lineterminator="\n")
         writer.writeheader()

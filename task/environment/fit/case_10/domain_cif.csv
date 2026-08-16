@@ -1,0 +1,11 @@
+domain_id,status,est_cif,est_se
+D01,identified,0.207792,0.115242
+D02,identified,0.276545,0.130051
+D03,identified,0.353595,0.108824
+D04,identified,0.277531,0.120580
+D05,identified,0.136259,0.075830
+D06,identified,0.240707,0.116615
+D07,identified,0.470407,0.159842
+D08,identified,0.319328,0.135885
+D09,identified,0.406748,0.144777
+D10,empty,,

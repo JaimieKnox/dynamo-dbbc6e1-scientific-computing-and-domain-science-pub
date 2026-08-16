@@ -1,4 +1,4 @@
-"""Verifier for Vale domain program-contrast outputs."""
+"""Verifier for Vale domain cumulative incidence outputs."""
 
 from __future__ import annotations
 
@@ -11,12 +11,11 @@ from wrong_models import all_contrasts
 DATA = Path("/app/data")
 FIT = Path("/app/fit")
 OUT = Path("/app/output")
-TABLE = OUT / "domain_contrasts.csv"
+TABLE = OUT / "domain_cif.csv"
 TESTS_PROD = Path("/tests/inputs/production")
 INPUT_FILES = (
     "listings.csv",
-    "interviews.csv",
-    "roster.csv",
+    "events.csv",
     "domain_crosswalk.csv",
     "census_domains.csv",
 )
@@ -38,7 +37,7 @@ def test_production_inputs_match_verifier_copy():
 
 
 def test_output_file_is_ordinary():
-    """Success: /app/output/domain_contrasts.csv is an ordinary non-symlink file."""
+    """Success: /app/output/domain_cif.csv is an ordinary non-symlink file."""
     assert TABLE.is_file()
     assert not TABLE.is_symlink()
 
@@ -60,29 +59,29 @@ def test_status_and_blank_fields_match_contract():
     assert [row["status"] for row in actual] == [row["status"] for row in expected]
     for row in actual:
         if row["status"] in {STATUS_EMPTY, STATUS_UNIDENTIFIED}:
-            assert row["est_ate"] == ""
+            assert row["est_cif"] == ""
             assert row["est_se"] == ""
         else:
-            assert row["est_ate"] != ""
+            assert row["est_cif"] != ""
             assert row["est_se"] != ""
 
 
-def test_ates_match_contract():
-    """Success: est_ate matches the independently recomputed weighted mean-of-rates contrasts."""
+def test_cifs_match_contract():
+    """Success: est_cif matches the independently recomputed competing-event incidence."""
     expected = estimate_rows(TESTS_PROD)
     actual = _read_csv(TABLE)
-    assert [row["est_ate"] for row in actual] == [row["est_ate"] for row in expected]
+    assert [row["est_cif"] for row in actual] == [row["est_cif"] for row in expected]
 
 
 def test_ses_match_contract():
-    """Success: est_se matches the independently recomputed cluster linearized SEs."""
+    """Success: est_se matches the independently recomputed person linearized SEs."""
     expected = estimate_rows(TESTS_PROD)
     actual = _read_csv(TABLE)
     assert [row["est_se"] for row in actual] == [row["est_se"] for row in expected]
 
 
 def test_wrong_model_contrasts_diverge():
-    """Success: Hajek, OLS, interview-domain, listing-domain, weighted-NR, no-region GREG, and drop-empty-item siblings diverge."""
+    """Success: independent-censoring, origin-risk-set, and report-domain siblings diverge."""
     assert all_contrasts(TESTS_PROD) is True
 
 
@@ -95,8 +94,8 @@ def test_fit_cases_ship_worked_tables():
         assert not (case / "expected").exists(), case.name
         for name in INPUT_FILES:
             assert (case / name).is_file(), f"{case.name}/{name}"
-        published = case / "domain_contrasts.csv"
-        assert published.is_file(), f"{case.name}/domain_contrasts.csv"
+        published = case / "domain_cif.csv"
+        assert published.is_file(), f"{case.name}/domain_cif.csv"
         assert not published.is_symlink(), case.name
         assert case.name.startswith("case_")
         assert case.name.removeprefix("case_").isdigit(), case.name
