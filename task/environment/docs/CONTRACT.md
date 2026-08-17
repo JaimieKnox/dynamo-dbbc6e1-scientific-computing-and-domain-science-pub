@@ -21,7 +21,7 @@ Time is days since onset. A household enters the risk set after it is listed. It
 
 The published incidence is the cumulative incidence of event type `1` at day 90 in the presence of event type `2`. Treating type `2` as independent censoring is not the published incidence. Type `0` is censoring.
 
-The unique hazard increments, product-limit survival through both event types, and person linearized standard error are the construction that reproduces every fit published table.
+The unique hazard increments, product-limit survival through both event types, and person linearized standard error are the construction that reproduces every fit published table. The published incidence uses the delayed-entry at-risk count. The published standard error uses the origin at-risk count, as if every household were listed on onset. Fit published tables list every household on onset, so those two counts coincide there. Production listing can follow onset, and the published SE is not the delayed-entry Greenwood formula.
 
 ## Identification
 

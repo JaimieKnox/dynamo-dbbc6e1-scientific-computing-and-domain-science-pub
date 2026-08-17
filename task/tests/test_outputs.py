@@ -88,7 +88,7 @@ def test_ses_match_contract():
 
 
 def test_wrong_model_contrasts_diverge():
-    """Success: independent-censoring, origin-risk-set, and report-domain siblings diverge."""
+    """Success: independent-censoring, origin-risk-set, report-domain, and delayed-entry SE siblings diverge."""
     assert all_contrasts(TESTS_PROD) is True
 
 

@@ -78,18 +78,27 @@ def construct_sample(data_dir: Path) -> list[dict[str, Any]]:
     return people
 
 
-def _aj(records: list[dict[str, Any]], *, ignore_delay: bool = False) -> tuple[float, float]:
+def _aj(
+    records: list[dict[str, Any]],
+    *,
+    ignore_delay: bool = False,
+    se_origin: bool = True,
+) -> tuple[float, float]:
     surv = 1.0
     cif = 0.0
     var = 0.0
     for t in range(1, HORIZON + 1):
         at_risk = 0
+        at_risk_se = 0
         d1 = 0
         d2 = 0
         for rec in records:
             entry = 0 if ignore_delay else rec["L"]
             if entry < t <= rec["T"]:
                 at_risk += 1
+            entry_se = 0 if (ignore_delay or se_origin) else rec["L"]
+            if entry_se < t <= rec["T"]:
+                at_risk_se += 1
             if rec["T"] == t and rec["C"] == CAUSE_INTEREST:
                 d1 += 1
             if rec["T"] == t and rec["C"] == CAUSE_COMPETE:
@@ -98,7 +107,8 @@ def _aj(records: list[dict[str, Any]], *, ignore_delay: bool = False) -> tuple[f
             continue
         dlam1 = d1 / at_risk
         dlam2 = d2 / at_risk
-        var += (surv ** 2) * d1 * (at_risk - d1) / (at_risk ** 3)
+        if at_risk_se > 0:
+            var += (surv ** 2) * d1 * (at_risk_se - d1) / (at_risk_se ** 3)
         cif += surv * dlam1
         surv *= max(0.0, 1.0 - dlam1 - dlam2)
     se = float(np.sqrt(max(var, 0.0)))
@@ -116,6 +126,7 @@ def estimate_rows(
     ignore_delay: bool = False,
     treat_compete_as_censor: bool = False,
     use_report_domain: bool = False,
+    se_origin: bool = True,
 ) -> list[dict[str, str]]:
     people = construct_sample(data_dir)
     if use_report_domain:
@@ -160,7 +171,7 @@ def estimate_rows(
                 }
             )
             continue
-        cif, se = _aj(members, ignore_delay=ignore_delay)
+        cif, se = _aj(members, ignore_delay=ignore_delay, se_origin=se_origin)
         out.append(
             {
                 "domain_id": dom,
